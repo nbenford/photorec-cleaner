@@ -9,9 +9,15 @@ A command-line utility to intelligently organize files recovered by [PhotoRec](h
 
 Sometimes you only need to recover a handful of file types, but your drive can quickly get filled by thousands of unwanted image and text files. The catch is that the more file types PhotoRec parses, the better the output. Only searching for one or two types can result in erroneously huge files.
 
-Photorec Cleaner allows PhotoRec to parse all file types, but actively deletes unwated types to keep the output tidy. It also can reorganize the kept files into a type-based folder structure, as well as create a log of all deleted and kept files.
+Photorec Cleaner allows PhotoRec to parse all file types, but actively deletes unwated types in real time to keep the output tidy. It also can reorganize the kept files into a type-based folder structure, as well as create a log of all deleted and kept files.
 
-This is an early version of the script and therefore shouldn't be used for critical forensic applications at this time. Use at your own risk.
+> [!NOTE]
+>This early version of the script shouldn't be used for critical forensic applications. Use at your own risk.
+
+Please [email me](mailto:noel.benford@gmail.com) with any issues, questions, comments, or suggestions. Thanks!
+
+Sincerely,
+Noel
 
 ## Requirements
 
