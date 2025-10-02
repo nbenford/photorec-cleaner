@@ -1,5 +1,5 @@
 """
-Tests app against imaginary files.
+Tests app against auto-created imaginary files.
 """
 
 import unittest
