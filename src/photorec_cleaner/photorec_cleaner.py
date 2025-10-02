@@ -164,13 +164,13 @@ def main():
         "-k",
         "--keep",
         nargs="+",
-        help="Defines an allow list. Only files with these extensions will be kept; all others are deleted.",
+        help="Allow list. Only files with these extensions will be kept; all others are deleted.",
     )
     parser.add_argument(
         "-x",
         "--exclude",
         nargs="+",
-        help="Defines a deny list. Files with these extensions will be deleted. This rule overrides --keep if both are used.",
+        help="Deny list. Files with these extensions will be deleted. Overrides -k if both used.",
     )
 
     parser.add_argument(
@@ -203,7 +203,7 @@ def main():
         "-l",
         "--log",
         action="store_true",
-        help="Log all file actions (kept/deleted) to a timestamped CSV file in the output directory.",
+        help="Log all file actions (kept/deleted) to a CSV file in the output directory.",
     )
 
     args = parser.parse_args()
