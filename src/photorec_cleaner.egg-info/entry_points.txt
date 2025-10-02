@@ -1,2 +1,0 @@
-[console_scripts]
-photorec-cleaner = photorec_cleaner.photorec_cleaner:main
