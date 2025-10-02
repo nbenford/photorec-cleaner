@@ -16,9 +16,6 @@ Photorec Cleaner allows PhotoRec to parse all file types, but actively deletes u
 
 Please [email me](mailto:noel.benford@gmail.com) with any issues, questions, comments, or suggestions. Thanks!
 
-Sincerely,
-Noel
-
 ## Requirements
 
 - Python 3.6+
