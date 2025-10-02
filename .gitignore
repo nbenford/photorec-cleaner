@@ -1,0 +1,6 @@
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+
+# Unit test artifacts
+tests/temp_test_dir/
