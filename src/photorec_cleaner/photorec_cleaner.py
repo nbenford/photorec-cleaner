@@ -153,40 +153,57 @@ def main():
         "organize by type."
     )
     parser = argparse.ArgumentParser(description=description)
+
     parser.add_argument(
-        "-i", "--input", required=True, help="Path to PhotoRec output directory"
+        "-i",
+        "--input",
+        required=True,
+        help="Path to the PhotoRec output directory.",
     )
     parser.add_argument(
-        "-k", "--keep", nargs="+", help="List of file extensions to keep"
+        "-k",
+        "--keep",
+        nargs="+",
+        help="Defines an allow list. Only files with these extensions will be kept; all others are deleted.",
     )
     parser.add_argument(
-        "-x", "--exclude", nargs="+", help="List of file extensions to delete"
+        "-x",
+        "--exclude",
+        nargs="+",
+        help="Defines a deny list. Files with these extensions will be deleted. This rule overrides --keep if both are used.",
     )
+
     parser.add_argument(
         "-t",
         "--interval",
         type=int,
         default=5,
-        help="Seconds between scans (default: 5)",
+        help="Seconds between scanning for new folders. (default: 5)",
     )
+
     parser.add_argument(
         "-b",
         "--batch-size",
         type=int,
         default=500,
-        help="Max files per subfolder when organizing (default: 500)",
+        help="Max number of files per subfolder when reorganizing. (default: 500)",
     )
+
     parser.add_argument(
         "-r",
         "--reorganize",
         action="store_true",
-        help="Reorganize files after final cleanup",
+        help=(
+            "After cleaning, move kept files into folders named by file type "
+            "and remove the old `recup_dir.X` folders."
+        ),
     )
+
     parser.add_argument(
         "-l",
         "--log",
         action="store_true",
-        help="Log all file actions (kept/deleted) to a CSV file.",
+        help="Log all file actions (kept/deleted) to a timestamped CSV file in the output directory.",
     )
 
     args = parser.parse_args()
