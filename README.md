@@ -11,7 +11,7 @@ Sometimes you only need to recover a handful of file types, but your drive can q
 
 Photorec Cleaner allows PhotoRec to parse all file types, but actively deletes unwated types to keep the output tidy. It also can reorganize the kept files into a type-based folder structure, as well as create a log of all deleted and kept files.
 
-This is a very early version of the script and therefore shouldn't be used for critical forensic applications at this time. Use at your own risk.
+This is an early version of the script and therefore shouldn't be used for critical forensic applications at this time. Use at your own risk.
 
 ## Requirements
 
