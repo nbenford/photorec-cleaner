@@ -36,7 +36,7 @@ def _setup_logging(base_dir, state):
         return None
 
 
-def _monitor_and_clean_dirs(state, base_dir, keep_ext, exclude_ext, interval):
+def _monitor_and_clean_dirs(state, base_dir, keep_ext, exclude_ext, interval, logger=None):
     """The main loop to monitor and clean recup_dir folders as they appear."""
     while not state.final_cleanup:
         try:
@@ -56,7 +56,7 @@ def _monitor_and_clean_dirs(state, base_dir, keep_ext, exclude_ext, interval):
                 state.app_state = "cleaning"
                 for folder in dirs[:-1]:
                     if folder not in state.cleaned_folders:
-                        fu.clean_folder(folder, state, keep_ext, exclude_ext)
+                        fu.clean_folder(folder, state, keep_ext, exclude_ext, logger=logger)
                         state.cleaned_folders.add(folder)
 
             time.sleep(interval)
@@ -69,13 +69,13 @@ def _monitor_and_clean_dirs(state, base_dir, keep_ext, exclude_ext, interval):
     return True  # Indicate normal completion
 
 
-def _perform_final_cleanup(state, base_dir, keep_ext, exclude_ext):
+def _perform_final_cleanup(state, base_dir, keep_ext, exclude_ext, logger=None):
     """Cleans all remaining folders after the monitoring loop."""
     state.app_state = "cleaning"
     state.current_activity = "Performing final cleanup..."
     for folder in fu.get_recup_dirs(base_dir):
         if folder not in state.cleaned_folders:
-            fu.clean_folder(folder, state, keep_ext, exclude_ext)
+            fu.clean_folder(folder, state, keep_ext, exclude_ext, logger=logger)
             state.cleaned_folders.add(folder)
 
 

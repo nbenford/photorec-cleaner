@@ -6,9 +6,11 @@ build-backend = "setuptools.build_meta"
 name = "photorec-cleaner"
 version = "0.2.0"
 description = "A tool to clean and organize PhotoRec output directories."
+dependencies = ["toga"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [project.scripts]
 photorec-cleaner = "photorec_cleaner.photorec_cleaner:main"
+photorec-cleaner-gui = "photorec_cleaner.gui:main"

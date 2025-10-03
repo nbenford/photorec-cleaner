@@ -11,7 +11,7 @@ import shutil
 from math import ceil
 
 
-def clean_folder(folder, state, keep_ext=None, exclude_ext=None):
+def clean_folder(folder, state, keep_ext=None, exclude_ext=None, logger=None):
     """
     Walks through a folder, deleting or keeping files based on extension rules.
 
@@ -25,6 +25,7 @@ def clean_folder(folder, state, keep_ext=None, exclude_ext=None):
         keep_ext (set, optional): A set of file extensions to keep.
         exclude_ext (set, optional): A set of file extensions to explicitly delete.
             This takes precedence over `keep_ext`.
+        logger (function, optional): A callback function for logging messages.
     """
     files_processed = 0
     folder_name = os.path.basename(folder)
@@ -32,9 +33,11 @@ def clean_folder(folder, state, keep_ext=None, exclude_ext=None):
     for root, _, files in os.walk(folder):
         for f in files:
             files_processed += 1
-            state.current_activity = (
-                f"Processing {folder_name} ({files_processed} files)"
-            )
+            activity_message = f"Processing {folder_name} ({files_processed} files)"
+            state.current_activity = activity_message
+            if logger:
+                logger(activity_message)
+
             path = os.path.join(root, f)
             lower_f = f.lower()
 
@@ -64,6 +67,8 @@ def clean_folder(folder, state, keep_ext=None, exclude_ext=None):
                 state.total_kept_count += 1
                 state.kept_files.setdefault(primary_ext, []).append(path)
                 log_action(state, folder_name, f, primary_ext, "kept", path)
+                if logger:
+                    logger(f"Kept: {f}")
             else:
                 try:
                     size = os.path.getsize(path)
@@ -73,6 +78,8 @@ def clean_folder(folder, state, keep_ext=None, exclude_ext=None):
                     log_action(
                         state, folder_name, f, primary_ext, "deleted", path, size
                     )
+                    if logger:
+                        logger(f"Deleted: {f}")
                 except OSError:
                     # We could log this to a file if needed, but for the UI, we just continue.
                     pass
@@ -165,3 +172,31 @@ def organize_by_type(base_dir, state, batch_size=500):
             shutil.rmtree(folder)
         except OSError:
             pass  # If it fails, the folder just remains.
+
+def get_files_in_directory(directory):
+    """
+    Lists all files in a given directory, returning their details.
+
+    Args:
+        directory (str): The absolute path to the directory.
+
+    Returns:
+        list: A list of tuples, where each tuple contains:
+              (file_name, extension, size_in_bytes).
+              Returns an empty list if the directory is not valid.
+    """
+    if not os.path.isdir(directory):
+        return []
+
+    files_list = []
+    for item in os.listdir(directory):
+        item_path = os.path.join(directory, item)
+        if os.path.isfile(item_path):
+            try:
+                file_name, file_ext = os.path.splitext(item)
+                file_size = os.path.getsize(item_path)
+                files_list.append((file_name, file_ext.lstrip('.'), file_size))
+            except OSError:
+                # Ignore files that can't be accessed
+                continue
+    return files_list
