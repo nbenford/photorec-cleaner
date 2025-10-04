@@ -2,11 +2,12 @@
 Tests app against auto-created imaginary files.
 """
 
-import unittest
+import csv
 import os
 import shutil
-import csv
+import unittest
 from io import StringIO
+
 from src.photorec_cleaner import file_utils as fu
 from src.photorec_cleaner.app_state import AppState
 
