@@ -271,6 +271,16 @@ class AppController:
 
         self._close_log_file()
 
+    def on_close(self):
+        """Handles app shutdown."""
+        if self.monitoring_task and not self.monitoring_task.done():
+            self.monitoring_task.cancel()
+        
+        if self.polling_task and not self.polling_task.done():
+            self.polling_task.cancel()
+            
+        self._close_log_file()
+
     def _logger_callback(self, message: str):
         """Callback from background threads to update UI with status."""
         if not message:
