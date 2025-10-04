@@ -115,7 +115,7 @@ class TestFileUtils(unittest.TestCase):
         self.assertEqual(state.total_deleted_count, 5)
 
     def test_clean_folder_with_exclude_rules_and_logging(self):
-        """Verify that excluded files are deleted and logging works."""
+        """Verify that excluded files are deleted and logging works.""" 
         state = AppState()
         keep_extensions = {"jpg", "jpeg"}
         exclude_extensions = {"jpeg"}
@@ -135,3 +135,22 @@ class TestFileUtils(unittest.TestCase):
         # --- Assert Logging ---
         log_stream.seek(0)
         self.assertEqual(len(list(csv.reader(log_stream))), 6)  # 1 kept, 5 deleted
+
+    def test_clean_folder_with_deletion_disabled(self):
+        """Verify that no files are deleted when keep_ext is an empty set."""
+        state = AppState()
+        keep_extensions = set()  # Empty set simulates deletion being disabled
+
+        # --- Act ---
+        fu.clean_folder(self.recup_dir, state, keep_ext=keep_extensions)
+
+        # --- Assert ---
+        # Verify that no files were deleted
+        remaining_files = os.listdir(self.recup_dir)
+        self.assertEqual(len(remaining_files), len(self.files_to_create))
+
+        # Verify the application state
+        self.assertEqual(state.total_kept_count, len(self.files_to_create))
+        self.assertEqual(state.total_deleted_count, 0)
+        self.assertEqual(state.total_deleted_size, 0)
+
