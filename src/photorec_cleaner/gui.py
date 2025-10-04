@@ -73,7 +73,7 @@ class PhotoRecCleanerApp(toga.App):
         ext_box.add(exclude_label)
         ext_box.add(self.exclude_ext_input)
 
-        self.toggle_cleaning_controls(self.cleaning_switch)  # Set initial state
+        self._set_initial_cleaning_controls_state()
 
         main_box.add(ext_box)
 
@@ -209,11 +209,18 @@ class PhotoRecCleanerApp(toga.App):
 
         self.main_box = main_box
 
+    def _set_initial_cleaning_controls_state(self):
+        """Sets the initial enabled state of the cleaning controls."""
+        self.keep_ext_input.enabled = self.cleaning_switch.value
+        self.exclude_ext_input.enabled = self.cleaning_switch.value
+
     async def toggle_cleaning_controls(self, widget):
         if widget.value:
-            confirmed = await self.main_window.confirm_dialog(
-                "Confirm Permanent Deletion",
-                "Are you sure you want to enable file deletion? This action is permanent and cannot be undone.",
+            confirmed = await self.main_window.dialog(
+                toga.ConfirmDialog(
+                    "Confirm Permanent Deletion",
+                    "Are you sure you want to enable file deletion? This action is permanent and cannot be undone.",
+                )
             )
             if not confirmed:
                 widget.value = False
@@ -361,7 +368,11 @@ class PhotoRecCleanerApp(toga.App):
 
 
 def main():
-    return PhotoRecCleanerApp("PhotoRec Cleaner", "org.beeware.photorec_cleaner")
+    return PhotoRecCleanerApp(
+        "PhotoRec Cleaner",
+        "org.beeware.photorec_cleaner",
+        icon="resources/photorec_cleaner",
+    )
 
 
 if __name__ == "__main__":

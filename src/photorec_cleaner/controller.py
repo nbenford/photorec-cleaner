@@ -10,12 +10,15 @@ import asyncio
 import csv
 import os
 from datetime import datetime
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from ..photorec_cleaner.app_state import AppState
 from ..photorec_cleaner.file_utils import clean_folder, get_recup_dirs, organize_by_type
 from ..photorec_cleaner.photorec_cleaner import Cleaner
 from .gui_utils import shorten_path
+
+if TYPE_CHECKING:
+    from .gui import PhotoRecCleanerApp
 
 
 class AppController:
