@@ -209,7 +209,15 @@ class PhotoRecCleanerApp(toga.App):
 
         self.main_box = main_box
 
-    def toggle_cleaning_controls(self, widget):
+    async def toggle_cleaning_controls(self, widget):
+        if widget.value:
+            confirmed = await self.main_window.confirm_dialog(
+                "Confirm Permanent Deletion",
+                "Are you sure you want to enable file deletion? This action is permanent and cannot be undone.",
+            )
+            if not confirmed:
+                widget.value = False
+
         self.keep_ext_input.enabled = widget.value
         self.exclude_ext_input.enabled = widget.value
 
