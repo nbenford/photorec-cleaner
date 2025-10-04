@@ -11,7 +11,7 @@ import shutil
 from math import ceil
 
 
-def clean_folder(folder, state, keep_ext=None, exclude_ext=None, logger=None):
+def clean_folder(folder, state, keep_ext=None, exclude_ext=None, logger=None, prefix="Processing"):
     """
     Walks through a folder, deleting or keeping files based on extension rules.
 
@@ -26,6 +26,7 @@ def clean_folder(folder, state, keep_ext=None, exclude_ext=None, logger=None):
         exclude_ext (set, optional): A set of file extensions to explicitly delete.
             This takes precedence over `keep_ext`.
         logger (function, optional): A callback function for logging messages.
+        prefix (str, optional): A string to prepend to activity log messages.
     """
     files_processed = 0
     folder_name = os.path.basename(folder)
@@ -33,7 +34,7 @@ def clean_folder(folder, state, keep_ext=None, exclude_ext=None, logger=None):
     for root, _, files in os.walk(folder):
         for f in files:
             files_processed += 1
-            activity_message = f"Processing {folder_name} ({files_processed} files)"
+            activity_message = f"{prefix} {folder_name} ({files_processed} files)"
             state.current_activity = activity_message
             if logger:
                 logger(activity_message)
@@ -45,7 +46,7 @@ def clean_folder(folder, state, keep_ext=None, exclude_ext=None, logger=None):
             primary_ext = os.path.splitext(lower_f)[1][1:] if "." in lower_f else ""
 
             # Default to deleting the file if keep rules are specified, otherwise keep.
-            keep = not keep_ext
+            keep = keep_ext is None
 
             # Check keep rules first.
             if keep_ext:

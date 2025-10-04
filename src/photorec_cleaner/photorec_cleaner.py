@@ -10,7 +10,7 @@ results rather than mutating UI objects directly.
 
 import os
 import time
-from typing import Dict, Iterable, Optional, Tuple
+from typing import Dict,  Optional
 
 from .app_state import AppState
 from .file_utils import clean_folder, get_recup_dirs
@@ -30,23 +30,10 @@ class Cleaner:
         app_state: AppState,
         logger: Optional[callable] = None,
     ) -> Dict:
-        """Perform a single scan/clean pass.
-
-
-        Returns a dict with keys:
-        - processed_folders: list of processed folder paths
-        - last_deleted: last deleted filepath (or None)
-        - cleaned_count: number of folders cleaned this pass
-        - timestamp: time.time() at end
-        """
         keep_ext = self._normalize_ext_set(keep_ext_csv)
         exclude_ext = self._normalize_ext_set(exclude_ext_csv)
 
-        # Clear kept_files for this pass to avoid re-counting from previous passes.
-        app_state.kept_files.clear()
-
         processed = []
-        last_deleted = None
 
         recup_dirs = get_recup_dirs(self.base_dir)
         if not recup_dirs:
@@ -64,22 +51,29 @@ class Cleaner:
             if d not in app_state.cleaned_folders and d != active_folder
         ]
 
+        # Process fully completed folders (safe to clean/delete)
         for folder in folders_to_process:
-            # clean_folder is expected to update app_state via the app_state passed in
-            # and optionally call logger(message)
+            if logger:
+                logger(f"Processing {folder}")
+            # perform actual cleaning -> this updates app_state counters
             clean_folder(
                 folder,
                 app_state,
                 keep_ext=keep_ext,
                 exclude_ext=exclude_ext,
                 logger=logger,
+                prefix="Processing",
             )
+            # mark it as cleaned so we don't reprocess
             app_state.cleaned_folders.add(folder)
             processed.append(folder)
 
-        # We can't reliably know the last deleted file path unless clean_folder reports it via logger.
-        # For compatibility, we don't invent that here; the logger callback (from GUI) should capture
-        # the most recent filename reported.
+        # For live feedback, simply log the name of the active folder.
+        # The controller loop handles the "Monitoring..." status if no folders exist.
+        if active_folder:
+            if logger:
+                logger(f"Processing active folder: {os.path.basename(active_folder)}")
+
         return {
             "processed_folders": processed,
             "last_deleted": None,
