@@ -14,7 +14,7 @@ import asyncio
 
 import toga
 from toga.style import Pack
-from toga.constants import  GREEN
+from toga.constants import GREEN
 
 from ..photorec_cleaner.app_state import AppState
 from ..photorec_cleaner.file_utils import get_recup_dirs
@@ -40,7 +40,9 @@ class PhotoRecCleanerApp(toga.App):
 
         # Directory selection
         dir_box = toga.Box(style=Pack(margin_bottom=10))
-        dir_label = toga.Label("PhotoRec Output Directory:", style=Pack(margin_right=10))
+        dir_label = toga.Label(
+            "PhotoRec Output Directory:", style=Pack(margin_right=10)
+        )
         self.dir_path_input = toga.TextInput(readonly=True, style=Pack(flex=1))
         dir_select_button = toga.Button(
             "Select...", on_press=self.select_directory, style=Pack(margin_left=10)
@@ -62,14 +64,16 @@ class PhotoRecCleanerApp(toga.App):
         exclude_label = toga.Label(
             "Exclude (csv):", style=Pack(margin_left=10, margin_right=10)
         )
-        self.exclude_ext_input = toga.TextInput(value="html.gz,xml.gz", style=Pack(flex=1))
+        self.exclude_ext_input = toga.TextInput(
+            value="html.gz,xml.gz", style=Pack(flex=1)
+        )
         ext_box.add(self.cleaning_switch)
         ext_box.add(keep_label)
         ext_box.add(self.keep_ext_input)
         ext_box.add(exclude_label)
         ext_box.add(self.exclude_ext_input)
 
-        self.toggle_cleaning_controls(self.cleaning_switch) # Set initial state
+        self.toggle_cleaning_controls(self.cleaning_switch)  # Set initial state
 
         main_box.add(ext_box)
 
@@ -107,50 +111,96 @@ class PhotoRecCleanerApp(toga.App):
 
         # Running Tally
         tally_box = toga.Box(style=Pack(margin_top=10))
-        self.folders_processed_label = toga.Label("Folders Processed: 0", font_weight="bold", font_size=10, flex=1)
-        self.files_kept_label = toga.Label("Files Kept: 0", style=Pack(margin_left=20),font_weight="bold", font_size=10, flex=1)
+        self.folders_processed_label = toga.Label(
+            "Folders Processed: 0", font_weight="bold", font_size=10, flex=1
+        )
+        self.files_kept_label = toga.Label(
+            "Files Kept: 0",
+            style=Pack(margin_left=20),
+            font_weight="bold",
+            font_size=10,
+            flex=1,
+        )
         self.files_deleted_label = toga.Label(
-            "Files Deleted: 0", style=Pack(margin_left=20,font_weight="bold", font_size=10, flex=1)
+            "Files Deleted: 0",
+            style=Pack(margin_left=20, font_weight="bold", font_size=10, flex=1),
         )
         self.space_saved_label = toga.Label(
-            "Space Saved: 0 B", style=Pack(margin_left=20,font_weight="bold", font_size=10, flex=1, margin_right=20)
+            "Space Saved: 0 B",
+            style=Pack(
+                margin_left=20,
+                font_weight="bold",
+                font_size=10,
+                flex=1,
+                margin_right=20,
+            ),
         )
         tally_box.add(self.folders_processed_label)
         tally_box.add(self.files_kept_label)
         tally_box.add(self.files_deleted_label)
         tally_box.add(self.space_saved_label)
-        
-        
+
         main_box.add(tally_box)
         main_box.add(toga.Divider(margin_top=20, margin_bottom=10))
 
         # Guidance message area
-        self.guidance_label = toga.Label("", style=Pack(text_align="center", font_style="italic", margin_bottom=5))
+        self.guidance_label = toga.Label(
+            "", style=Pack(text_align="center", font_style="italic", margin_bottom=5)
+        )
         main_box.add(self.guidance_label)
 
-        # Status area (two labels)
+        # Status area (one label)
         status_box = toga.Box(style=Pack(direction="column", margin=7), flex=2)
-        self.status_label = toga.Label("Ready",font_family="monospace", font_size=10, color=GREEN, font_weight="bold")
-        self.last_deleted_label = toga.Label("")
+        self.status_label = toga.Label(
+            "Ready",
+            font_family="monospace",
+            font_size=10,
+            color=GREEN,
+            font_weight="bold",
+        )
 
         status_box.add(self.status_label)
-        status_box.add(self.last_deleted_label)
 
-        scroll_container = toga.ScrollContainer(content=status_box, horizontal=False, vertical=True)
+        scroll_container = toga.ScrollContainer(
+            content=status_box, horizontal=False, vertical=True
+        )
 
         main_box.add(scroll_container)
         main_box.add(toga.Divider(margin_top=10, margin_bottom=10))
 
         # Action buttons
-        action_box = toga.Box(style=Pack(margin_top=10, flex=1, align_items="end", margin_bottom=10))
+        action_box = toga.Box(
+            style=Pack(margin_top=10, flex=1, align_items="end", margin_bottom=10)
+        )
         self.clean_now_button = toga.Button(
-            "Process Now", on_press=self.clean_now_handler, enabled=False, flex=1, margin=5, font_weight="bold", font_size=10, height=30
+            "Process Now",
+            on_press=self.clean_now_handler,
+            enabled=False,
+            flex=1,
+            margin=5,
+            font_weight="bold",
+            font_size=10,
+            height=30,
         )
         self.start_button = toga.Button(
-            "Start Live Monitoring", on_press=self.start_monitoring_handler, enabled=False, flex=1, margin=5, font_weight="bold", font_size=10, height=30
+            "Start Live Monitoring",
+            on_press=self.start_monitoring_handler,
+            enabled=False,
+            flex=1,
+            margin=5,
+            font_weight="bold",
+            font_size=10,
+            height=30,
         )
         self.finish_button = toga.Button(
-            "Finalize", on_press=self.finish_handler, enabled=False, flex=1, margin=5, font_weight="bold", font_size=10, height=30
+            "Finalize",
+            on_press=self.finish_handler,
+            enabled=False,
+            flex=1,
+            margin=5,
+            font_weight="bold",
+            font_size=10,
+            height=30,
         )
         action_box.add(self.clean_now_button)
         action_box.add(self.start_button)
@@ -209,12 +259,8 @@ class PhotoRecCleanerApp(toga.App):
         self.guidance_label.text = (
             "Live monitoring started. Click 'Finalize' when PhotoRec is finished."
         )
-        self.status_label.text = "Monitoring..." # Set initial status immediately
+        self.status_label.text = "Monitoring..."  # Set initial status immediately
         self.controller.start_monitoring()
-
-    def _update_last_deleted_label(self):
-        text = f"Last deleted: {shorten_path(self.controller._last_deleted_name or '')}"
-        self.last_deleted_label.text = text
 
     def _set_status_text_threadsafe(self, message: str):
         # Keep status concise to avoid layout thrashing
@@ -280,7 +326,8 @@ class PhotoRecCleanerApp(toga.App):
             f"Total Space Saved: {self._format_size(self.app_state.total_deleted_size)}"
         )
         asyncio.run_coroutine_threadsafe(
-            self._show_dialog_async(report_title, report_body), asyncio.get_running_loop()
+            self._show_dialog_async(report_title, report_body),
+            asyncio.get_running_loop(),
         )
 
     def update_status(self, message: str):

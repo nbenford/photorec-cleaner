@@ -11,7 +11,9 @@ import shutil
 from math import ceil
 
 
-def clean_folder(folder, state, keep_ext=None, exclude_ext=None, logger=None, prefix="Processing"):
+def clean_folder(
+    folder, state, keep_ext=None, exclude_ext=None, logger=None, prefix="Processing"
+):
     """
     Walks through a folder, deleting or keeping files based on extension rules.
 
@@ -45,8 +47,9 @@ def clean_folder(folder, state, keep_ext=None, exclude_ext=None, logger=None, pr
             # Determine the primary extension for organization and logging
             primary_ext = os.path.splitext(lower_f)[1][1:] if "." in lower_f else ""
 
-            # Default to deleting the file if keep rules are specified, otherwise keep.
-            keep = keep_ext is None
+            # Default to keeping the file if no keep rules are specified.
+            # If keep_ext is a non-empty set, default to deleting.
+            keep = not keep_ext
 
             # Check keep rules first.
             if keep_ext:
@@ -174,6 +177,7 @@ def organize_by_type(base_dir, state, batch_size=500):
         except OSError:
             pass  # If it fails, the folder just remains.
 
+
 def get_files_in_directory(directory):
     """
     Lists all files in a given directory, returning their details.
@@ -196,7 +200,7 @@ def get_files_in_directory(directory):
             try:
                 file_name, file_ext = os.path.splitext(item)
                 file_size = os.path.getsize(item_path)
-                files_list.append((file_name, file_ext.lstrip('.'), file_size))
+                files_list.append((file_name, file_ext.lstrip("."), file_size))
             except OSError:
                 # Ignore files that can't be accessed
                 continue

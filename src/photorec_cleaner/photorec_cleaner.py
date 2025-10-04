@@ -72,7 +72,7 @@ class Cleaner:
         # The controller loop handles the "Monitoring..." status if no folders exist.
         if active_folder:
             if logger:
-                logger(f"Processing active folder: {os.path.basename(active_folder)}")
+                logger(f"Processing folder: {os.path.basename(active_folder)}")
 
         return {
             "processed_folders": processed,

@@ -4,6 +4,7 @@ Utility functions for the PhotoRec Cleaner GUI.
 
 MAX_STATUS_PATH = 80
 
+
 def shorten_path(path: str, maxlen: int = MAX_STATUS_PATH) -> str:
     if not path:
         return ""
