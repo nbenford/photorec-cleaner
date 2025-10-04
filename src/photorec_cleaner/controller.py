@@ -21,14 +21,14 @@ from .gui_utils import shorten_path
 class AppController:
     """Handles application logic for the PhotoRecCleanerApp."""
 
-    def __init__(self, app: 'PhotoRecCleanerApp', app_state: AppState):
+    def __init__(self, app: "PhotoRecCleanerApp", app_state: AppState):
         self.app = app
         self.app_state = app_state
+        self.loop = asyncio.get_running_loop()
         self.cleaner: Optional[Cleaner] = None
         self.monitoring_task: Optional[asyncio.Task] = None
         self.polling_task: Optional[asyncio.Task] = None
         self._stop_monitoring = False
-        self._last_deleted_name: Optional[str] = None
 
     def set_cleaner(self, path: str):
         """Instantiates the Cleaner for a given directory."""
@@ -77,7 +77,9 @@ class AppController:
                 # The file handle needs to be kept open.
                 self.app_state.log_file_handle = open(log_filepath, "w", newline="")
                 self.app_state.log_writer = csv.writer(self.app_state.log_file_handle)
-                self.app_state.log_writer.writerow(["Folder", "Filename", "Extension", "Status", "Size"])
+                self.app_state.log_writer.writerow(
+                    ["Folder", "Filename", "Extension", "Status", "Size"]
+                )
             except OSError as e:
                 self.app.status_label.text = f"Error creating log file: {e}"
 
@@ -89,20 +91,31 @@ class AppController:
                     self.app.status_label.text = "No directory selected"
                     await asyncio.sleep(1)
                     continue
-                
+
                 # Check for folders. If none, set status and wait.
-                recup_dirs = await asyncio.to_thread(get_recup_dirs, self.cleaner.base_dir)
+                recup_dirs = await asyncio.to_thread(
+                    get_recup_dirs, self.cleaner.base_dir
+                )
                 if not recup_dirs:
                     self.app.status_label.text = "Monitoring..."
                     self.app.update_tally()
                     await asyncio.sleep(1)
                     continue
 
-                self.app.status_label.text = "Processing..."
+                if self.app.status_label.text == "Monitoring...":
+                    self.app.status_label.text = "Processing..."
 
                 # Pass empty strings for extensions if cleaning is disabled
-                keep_csv = self.app.keep_ext_input.value if self.app.cleaning_switch.value else ""
-                exclude_csv = self.app.exclude_ext_input.value if self.app.cleaning_switch.value else ""
+                keep_csv = (
+                    self.app.keep_ext_input.value
+                    if self.app.cleaning_switch.value
+                    else ""
+                )
+                exclude_csv = (
+                    self.app.exclude_ext_input.value
+                    if self.app.cleaning_switch.value
+                    else ""
+                )
 
                 # run_once will now handle both processing completed folders and
                 # scanning the active one. The logger callbacks within it are the
@@ -137,12 +150,26 @@ class AppController:
         if recup_dirs:
             last_folder = recup_dirs[-1]
             if last_folder not in self.app_state.cleaned_folders:
-                self.app.status_label.text = f"Processing final folder {shorten_path(last_folder, 60)}..."
+                self.app.status_label.text = (
+                    f"Processing final folder {shorten_path(last_folder, 60)}..."
+                )
                 # Respect the cleaning switch for the final pass
-                keep_ext_str = self.app.keep_ext_input.value if self.app.cleaning_switch.value else ""
-                exclude_ext_str = self.app.exclude_ext_input.value if self.app.cleaning_switch.value else ""
-                keep_ext = {ext.strip() for ext in keep_ext_str.split(",") if ext.strip()}
-                exclude_ext = {ext.strip() for ext in exclude_ext_str.split(",") if ext.strip()}
+                keep_ext_str = (
+                    self.app.keep_ext_input.value
+                    if self.app.cleaning_switch.value
+                    else ""
+                )
+                exclude_ext_str = (
+                    self.app.exclude_ext_input.value
+                    if self.app.cleaning_switch.value
+                    else ""
+                )
+                keep_ext = {
+                    ext.strip() for ext in keep_ext_str.split(",") if ext.strip()
+                }
+                exclude_ext = {
+                    ext.strip() for ext in exclude_ext_str.split(",") if ext.strip()
+                }
                 clean_folder(
                     last_folder,
                     self.app_state,
@@ -187,18 +214,26 @@ class AppController:
         recup_dirs = get_recup_dirs(base_dir)
         if not recup_dirs:
             message = "No 'recup_dir' folders found to clean."
-            asyncio.run_coroutine_threadsafe(self.app._set_status_text_async(message), loop)
+            asyncio.run_coroutine_threadsafe(
+                self.app._set_status_text_async(message), loop
+            )
             return
 
         # Respect the cleaning switch for the one-shot process
-        keep_ext_str = self.app.keep_ext_input.value if self.app.cleaning_switch.value else ""
-        exclude_ext_str = self.app.exclude_ext_input.value if self.app.cleaning_switch.value else ""
+        keep_ext_str = (
+            self.app.keep_ext_input.value if self.app.cleaning_switch.value else ""
+        )
+        exclude_ext_str = (
+            self.app.exclude_ext_input.value if self.app.cleaning_switch.value else ""
+        )
         keep_ext = {ext.strip() for ext in keep_ext_str.split(",") if ext.strip()}
         exclude_ext = {ext.strip() for ext in exclude_ext_str.split(",") if ext.strip()}
 
         for i, folder in enumerate(recup_dirs):
             message = f"Processing folder {i + 1}/{len(recup_dirs)}..."
-            asyncio.run_coroutine_threadsafe(self.app._set_status_text_async(message), loop)
+            asyncio.run_coroutine_threadsafe(
+                self.app._set_status_text_async(message), loop
+            )
             clean_folder(
                 folder,
                 self.app_state,
@@ -212,11 +247,15 @@ class AppController:
 
         if self.app.reorg_switch.value:
             message = "Reorganizing files..."
-            asyncio.run_coroutine_threadsafe(self.app._set_status_text_async(message), loop)
+            asyncio.run_coroutine_threadsafe(
+                self.app._set_status_text_async(message), loop
+            )
             batch_size = int(self.app.batch_size_input.value)
             organize_by_type(base_dir, self.app_state, batch_size=batch_size)
             message = "Reorganization complete."
-            asyncio.run_coroutine_threadsafe(self.app._set_status_text_async(message), loop)
+            asyncio.run_coroutine_threadsafe(
+                self.app._set_status_text_async(message), loop
+            )
 
         report = (
             f"One-Shot Processing Complete\n\n"
@@ -237,47 +276,5 @@ class AppController:
         if not message:
             return
 
-        lower = message.lower()
-
-        # Deleted / moved lines still treated as deletions
-        if "deleted" in lower or "moved" in lower:
-            parts = message.split()
-            candidate = parts[-1]
-            self._last_deleted_name = candidate
-            try:
-                asyncio.get_event_loop().call_soon_threadsafe(
-                    self.app._update_last_deleted_label
-                )
-            except Exception:
-                pass
-            return
-
-        # Distinct live-file prefix (from Cleaner.run_once)
-        if message.startswith("LiveFile:"):
-            candidate = message.split(":", 1)[1].strip()
-            self._last_deleted_name = candidate  # shows as 'Last deleted' label but represents last seen file
-            try:
-                asyncio.get_event_loop().call_soon_threadsafe(
-                    self.app._update_last_deleted_label
-                )
-            except Exception:
-                pass
-            return
-
-        # Processing / scanning messages -> update main status label
-        if message.lower().startswith("processing"):
-            try:
-                asyncio.get_event_loop().call_soon_threadsafe(
-                    self.app._set_status_text_threadsafe, message
-                )
-            except Exception:
-                pass
-            return
-
-        # Fallback: send any other message to the status label
-        try:
-            asyncio.get_event_loop().call_soon_threadsafe(
-                self.app._set_status_text_threadsafe, message
-            )
-        except Exception:
-            pass
+        # Pass all messages to the status label
+        self.loop.call_soon_threadsafe(self.app.update_status, message)
