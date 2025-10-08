@@ -29,8 +29,12 @@ class PhotoRecCleanerApp(toga.App):
         self.app_state = AppState()
         self.controller = AppController(self, self.app_state)
 
-
         self.build_ui()
+        
+        # Set initial state of controls now that they all exist.
+        self.toggle_log_path(self.log_switch)
+        self._update_start_button_state()
+
         self.main_window.content = self.main_box
         self.main_window.on_close = (
             self.on_close
@@ -113,7 +117,6 @@ class PhotoRecCleanerApp(toga.App):
             on_press=self.select_log_folder,
             style=Pack(margin_left=10),
         )
-        self.toggle_log_path(self.log_switch)
         log_box.add(self.log_switch)
         log_box.add(self.log_path_input)
         log_box.add(self.log_path_button)
@@ -121,7 +124,11 @@ class PhotoRecCleanerApp(toga.App):
 
         # Reorganization controls
         reorg_box = toga.Box(style=Pack(margin_bottom=10))
-        self.reorg_switch = toga.Switch("Reorganize Files", style=Pack(margin_right=10))
+        self.reorg_switch = toga.Switch(
+            "Reorganize Files", 
+            on_change=self._update_start_button_state,
+            style=Pack(margin_right=10)
+        )
         batch_label = toga.Label(
             "Batch Size:", style=Pack(margin_left=10, margin_right=10)
         )
@@ -130,6 +137,7 @@ class PhotoRecCleanerApp(toga.App):
         reorg_box.add(batch_label)
         reorg_box.add(self.batch_size_input)
         main_box.add(reorg_box)
+
         main_box.add(toga.Divider(margin_top=10, margin_bottom=10))
 
         # Running Tally
@@ -170,10 +178,15 @@ class PhotoRecCleanerApp(toga.App):
         self.progress_bar.style.visibility = 'hidden'
         main_box.add(self.progress_bar)
 
-        main_box.add(toga.Divider(margin_top=10, margin_bottom=10))
+        main_box.add(toga.Divider(margin_top=20, margin_bottom=10))
 
         # Status area (one label)
-        status_box = toga.Box(style=Pack(direction="column", margin=7), flex=2)
+        status_box = toga.Box(style=Pack(direction="column", margin_left=7, margin_right=7), flex=2)
+        self.guidance_label = toga.Label(
+            "", style=Pack(text_align="center", font_style="italic", margin_bottom=5)
+        )
+        status_box.add(self.guidance_label)
+
         self.status_label = toga.Label(
             "Ready",
             font_family="monospace",
@@ -181,19 +194,8 @@ class PhotoRecCleanerApp(toga.App):
             color=GREEN,
             font_weight="bold",
         )
-                # Guidance message area
-        self.guidance_label = toga.Label(
-            "",
-            font_family="monospace",
-            font_size=10,
-            color="#ffffff",
-            font_weight="bold",
-            style=Pack(margin_top=5)
-        )
 
         status_box.add(self.status_label)
-        status_box.add(self.guidance_label)
-
 
         scroll_container = toga.ScrollContainer(
             content=status_box, horizontal=False, vertical=True
@@ -204,7 +206,7 @@ class PhotoRecCleanerApp(toga.App):
 
         # Action buttons
         action_box = toga.Box(
-            style=Pack(margin_top=10, flex=1, align_items="center", margin_bottom=10)
+            style=Pack(margin_top=10, flex=1, align_items="end", margin_bottom=10)
         )
         self.clean_now_button = toga.Button(
             "Process Now",
@@ -248,6 +250,15 @@ class PhotoRecCleanerApp(toga.App):
         self.keep_ext_input.enabled = self.cleaning_switch.value
         self.exclude_ext_input.enabled = self.cleaning_switch.value
 
+    def _update_start_button_state(self, widget=None):
+        is_directory_selected = bool(self.dir_path_input.value)
+        is_any_option_selected = (
+            self.cleaning_switch.value
+            or self.log_switch.value
+            or self.reorg_switch.value
+        )
+        self.start_button.enabled = is_directory_selected and is_any_option_selected
+
     async def toggle_cleaning_controls(self, widget):
         if widget.value:
             confirmed = await self.main_window.dialog(
@@ -261,10 +272,12 @@ class PhotoRecCleanerApp(toga.App):
 
         self.keep_ext_input.enabled = widget.value
         self.exclude_ext_input.enabled = widget.value
+        self._update_start_button_state()
 
     def toggle_log_path(self, widget):
         self.log_path_input.enabled = widget.value
         self.log_path_button.enabled = widget.value
+        self._update_start_button_state()
 
     async def select_log_folder(self, widget):
         try:
@@ -292,7 +305,7 @@ class PhotoRecCleanerApp(toga.App):
                 self.log_path_input.value = str(path)
                 self.controller.set_cleaner(str(path))
                 self.controller.start_folder_polling()
-                self.start_button.enabled = True
+                self._update_start_button_state()
 
         except ValueError:
             await self.main_window.dialog(
@@ -303,11 +316,31 @@ class PhotoRecCleanerApp(toga.App):
 
     def start_monitoring_handler(self, widget):
         self.clean_now_button.enabled = False
-        self.start_button.enabled = False
         self.finish_button.enabled = True
         self.guidance_label.text = "Live monitoring started. Click 'Finalize' when PhotoRec is finished."
         self.status_label.text = "Monitoring..."  # Set initial status immediately
         self.controller.start_monitoring()
+
+        # Change button to Cancel
+        self.start_button.text = "Cancel"
+        self.start_button.on_press = self.cancel_handler
+
+    def cancel_handler(self, widget):
+        """Immediately cancels all processing."""
+        self.controller.cancel()
+
+        # Reset UI elements to their pre-monitoring state
+        self.status_label.text = "Cancelled."
+        self.guidance_label.text = ""
+        self.finish_button.enabled = False
+
+        # Reset start button
+        self.start_button.text = "Start Live Monitoring"
+        self.start_button.on_press = self.start_monitoring_handler
+        self._update_start_button_state()
+
+        # Restart polling to check for existing folders to enable the "Process Now" button
+        self.controller.start_folder_polling()
 
     def _set_status_text_threadsafe(self, message: str):
         # Keep status concise to avoid layout thrashing
@@ -340,7 +373,12 @@ class PhotoRecCleanerApp(toga.App):
         # get_recup_dirs can be slow, run it in a thread
         recup_dirs = await asyncio.to_thread(get_recup_dirs, base_dir)
         self.clean_now_button.enabled = bool(recup_dirs)
-        self.start_button.enabled = True
+        
+        # Reset start button
+        self.start_button.text = "Start Live Monitoring"
+        self.start_button.on_press = self.start_monitoring_handler
+        self._update_start_button_state() # This will set the enabled state correctly
+
         self.finish_button.enabled = False
         self.app_state.reset()
         self.guidance_label.text = ""

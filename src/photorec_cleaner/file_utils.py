@@ -34,7 +34,11 @@ def clean_folder(
     folder_name = os.path.basename(folder)
 
     for root, _, files in os.walk(folder):
+        if state.cancelled:
+            break
         for f in files:
+            if state.cancelled:
+                break
             files_processed += 1
             activity_message = f"{prefix} {folder_name} ({files_processed} files)"
             state.current_activity = activity_message
@@ -154,10 +158,12 @@ def organize_by_type(base_dir, state, batch_size=500):
             kept files.
         batch_size (int): The maximum number of files to place in any one subfolder.
     """
-    if not state.kept_files:
+    if not state.kept_files or state.cancelled:
         return
 
     for ext, paths in state.kept_files.items():
+        if state.cancelled:
+            break
         type_folder = os.path.join(base_dir, ext)
         os.makedirs(type_folder, exist_ok=True)
 
@@ -169,6 +175,8 @@ def organize_by_type(base_dir, state, batch_size=500):
         if num_batches <= 1:
             # If there's only one batch, move files directly to the type_folder
             for path in paths:
+                if state.cancelled:
+                    break
                 try:
                     shutil.move(path, type_folder)
                 except (shutil.Error, OSError):
@@ -176,6 +184,8 @@ def organize_by_type(base_dir, state, batch_size=500):
         else:
             # If multiple batches are needed, create subfolders
             for i, path in enumerate(paths):
+                if state.cancelled:
+                    break
                 batch_num = (i // batch_size) + 1
                 subfolder_name = str(batch_num)
                 subfolder = os.path.join(type_folder, subfolder_name)
@@ -185,9 +195,14 @@ def organize_by_type(base_dir, state, batch_size=500):
                 except (shutil.Error, OSError):
                     pass
 
+    if state.cancelled:
+        return
+
     # Clean up the now-empty recup_dir.* folders
     recup_dirs_to_delete = get_recup_dirs(base_dir)
     for folder in recup_dirs_to_delete:
+        if state.cancelled:
+            break
         try:
             shutil.rmtree(folder)
         except OSError:

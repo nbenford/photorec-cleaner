@@ -59,6 +59,7 @@ class AppController:
 
     def start_monitoring(self):
         """Starts the background monitoring task."""
+        self.app_state.cancelled = False
         if self.monitoring_task and not self.monitoring_task.done():
             return  # Already running
 
@@ -154,24 +155,28 @@ class AppController:
 
     def _finish_processing_sync(self, base_dir: str, loop: asyncio.AbstractEventLoop):
         """Synchronous method for final cleanup and reorganization."""
-        
-        total_steps = 1 # for closing log file
+        if self.app_state.cancelled:
+            return
+
+        total_steps = 1  # for closing log file
         if self.app.reorg_switch.value:
             total_steps += 1
-        
+
         recup_dirs = get_recup_dirs(base_dir)
         if recup_dirs:
             last_folder = recup_dirs[-1]
             if last_folder not in self.app_state.cleaned_folders:
                 total_steps += 1
-        
+
         asyncio.run_coroutine_threadsafe(
             self.app._update_progress_async(0, total_steps), loop
         )
-        
+
         steps_done = 0
 
         if recup_dirs:
+            if self.app_state.cancelled:
+                return
             last_folder = recup_dirs[-1]
             if last_folder not in self.app_state.cleaned_folders:
                 message = f"Processing final folder {shorten_path(last_folder, 60)}..."
@@ -210,6 +215,8 @@ class AppController:
                 )
 
         if self.app.reorg_switch.value:
+            if self.app_state.cancelled:
+                return
             message = "Reorganizing files..."
             asyncio.run_coroutine_threadsafe(
                 self.app._set_status_text_async(message), loop
@@ -224,6 +231,9 @@ class AppController:
             asyncio.run_coroutine_threadsafe(
                 self.app._update_progress_async(steps_done, total_steps), loop
             )
+
+        if self.app_state.cancelled:
+            return
 
         self._close_log_file()
         steps_done += 1
@@ -249,6 +259,8 @@ class AppController:
 
     def _one_shot_clean_sync(self, base_dir: str, loop: asyncio.AbstractEventLoop):
         """Synchronous method to clean all existing folders."""
+        if self.app_state.cancelled:
+            return
         self.app_state.reset()
         asyncio.run_coroutine_threadsafe(self.app._update_tally_async(), loop)
 
@@ -278,6 +290,8 @@ class AppController:
         exclude_ext = {ext.strip() for ext in exclude_ext_str.split(",") if ext.strip()}
 
         for i, folder in enumerate(recup_dirs):
+            if self.app_state.cancelled:
+                break
             message = f"Processing folder {i + 1}/{num_folders}..."
             asyncio.run_coroutine_threadsafe(
                 self.app._set_status_text_async(message), loop
@@ -296,6 +310,10 @@ class AppController:
                 self.app._update_progress_async(i + 1, num_folders), loop
             )
 
+        if self.app_state.cancelled:
+            self._close_log_file()
+            return
+
         if self.app.reorg_switch.value:
             message = "Reorganizing files..."
             asyncio.run_coroutine_threadsafe(
@@ -307,6 +325,10 @@ class AppController:
             asyncio.run_coroutine_threadsafe(
                 self.app._set_status_text_async(message), loop
             )
+
+        if self.app_state.cancelled:
+            self._close_log_file()
+            return
 
         report = (
             f"One-Shot Processing Complete\n\n"
@@ -324,13 +346,26 @@ class AppController:
 
     def on_close(self):
         """Handles app shutdown."""
+        self.app_state.cancelled = True  # Signal cancellation on close
         if self.monitoring_task and not self.monitoring_task.done():
             self.monitoring_task.cancel()
-        
+
         if self.polling_task and not self.polling_task.done():
             self.polling_task.cancel()
-            
+
         self._close_log_file()
+
+    def cancel(self):
+        """Immediately stops all processing."""
+        self.app_state.cancelled = True
+        if self.monitoring_task and not self.monitoring_task.done():
+            self._stop_monitoring = True
+            self.monitoring_task.cancel()
+
+        if self.polling_task and not self.polling_task.done():
+            self.polling_task.cancel()
+
+        self.app.status_label.text = "Processing cancelled."
 
     def _logger_callback(self, message: str):
         """Callback from background threads to update UI with status."""

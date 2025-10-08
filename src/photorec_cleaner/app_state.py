@@ -16,6 +16,7 @@ class AppState:
     total_deleted_size: int = 0
     log_writer: Union[Any, None] = None
     log_file_handle: Union[Any, None] = None
+    cancelled: bool = False
 
     def reset(self):
         """Resets all counters and state to their initial values."""
@@ -28,3 +29,4 @@ class AppState:
         if getattr(self, "log_file_handle", None):
             self.log_file_handle.close()
             self.log_file_handle = None
+        self.cancelled = False
