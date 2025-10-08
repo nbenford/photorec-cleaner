@@ -178,6 +178,10 @@ class PhotoRecCleanerApp(toga.App):
         self.progress_bar.style.visibility = 'hidden'
         main_box.add(self.progress_bar)
 
+        self.activity_indicator = toga.ActivityIndicator()
+        self.activity_indicator.style.visibility = 'hidden'
+        main_box.add(self.activity_indicator)
+
         main_box.add(toga.Divider(margin_top=20, margin_bottom=10))
 
         # Status area (one label)
@@ -329,6 +333,10 @@ class PhotoRecCleanerApp(toga.App):
         """Immediately cancels all processing."""
         self.controller.cancel()
 
+        self.activity_indicator.stop()
+        self.activity_indicator.style.visibility = "hidden"
+        self.progress_bar.style.visibility = "hidden"
+
         # Reset UI elements to their pre-monitoring state
         self.status_label.text = "Cancelled."
         self.guidance_label.text = ""
@@ -362,22 +370,34 @@ class PhotoRecCleanerApp(toga.App):
         return f"{size_bytes / 1024**3:.1f} GB"
 
     async def finish_handler(self, widget):
+        self.finish_button.enabled = False
+        self.clean_now_button.enabled = False
+
+        self.progress_bar.value = 0
         self.progress_bar.style.visibility = "visible"
+        self.activity_indicator.style.visibility = "visible"
+        self.activity_indicator.start()
+
         await self.controller.finish_processing()
+
+        # --- Exit processing state ---
+        self.activity_indicator.stop()
+        self.activity_indicator.style.visibility = "hidden"
         self.progress_bar.style.visibility = "hidden"
 
-        # Show final report
-        self._show_final_report()
+        # Show final report (only if not cancelled)
+        if not self.app_state.cancelled:
+            self._show_final_report()
 
-        base_dir = self.dir_path_input.value
         # get_recup_dirs can be slow, run it in a thread
+        base_dir = self.dir_path_input.value
         recup_dirs = await asyncio.to_thread(get_recup_dirs, base_dir)
         self.clean_now_button.enabled = bool(recup_dirs)
-        
+
         # Reset start button
         self.start_button.text = "Start Live Monitoring"
         self.start_button.on_press = self.start_monitoring_handler
-        self._update_start_button_state() # This will set the enabled state correctly
+        self._update_start_button_state()  # This will set the enabled state correctly
 
         self.finish_button.enabled = False
         self.app_state.reset()
@@ -386,19 +406,36 @@ class PhotoRecCleanerApp(toga.App):
 
     async def clean_now_handler(self, widget):
         """Handler for the 'Clean Now' button to process existing folders."""
-        # Disable buttons during processing
+        # --- Enter processing state ---
         self.clean_now_button.enabled = False
-        self.start_button.enabled = False
+        self.finish_button.enabled = False
+        self.start_button.text = "Cancel"
+        self.start_button.on_press = self.cancel_handler
+        self.start_button.enabled = True
+
+        self.progress_bar.value = 0
         self.progress_bar.style.visibility = "visible"
+        self.activity_indicator.style.visibility = "visible"
+        self.activity_indicator.start()
 
         await self.controller.perform_one_shot_clean()
 
-        # Re-enable start button, but keep clean_now disabled as folders are gone
-        self.start_button.enabled = True
+        # --- Exit processing state (unconditionally) ---
+        self.activity_indicator.stop()
+        self.activity_indicator.style.visibility = "hidden"
+        self.progress_bar.style.visibility = "hidden"
+
+        # Reset start button
+        self.start_button.text = "Start Live Monitoring"
+        self.start_button.on_press = self.start_monitoring_handler
+        self._update_start_button_state()
+
+        # clean_now is disabled because folders are gone
+        self.clean_now_button.enabled = False
+
         self.app_state.reset()
         self.guidance_label.text = ""
         self.update_tally()
-        self.progress_bar.style.visibility = "hidden"
 
     def _show_final_report(self):
         report_title = "Processing Complete"

@@ -250,6 +250,7 @@ class AppController:
 
     async def perform_one_shot_clean(self):
         """Runs the cleaning process once for all existing folders."""
+        self.app_state.reset()  # Reset state before starting a new operation
         base_dir = self.app.dir_path_input.value
         if not base_dir:
             return
@@ -259,9 +260,6 @@ class AppController:
 
     def _one_shot_clean_sync(self, base_dir: str, loop: asyncio.AbstractEventLoop):
         """Synchronous method to clean all existing folders."""
-        if self.app_state.cancelled:
-            return
-        self.app_state.reset()
         asyncio.run_coroutine_threadsafe(self.app._update_tally_async(), loop)
 
         self._setup_logging()
