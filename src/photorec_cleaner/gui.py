@@ -164,13 +164,13 @@ class PhotoRecCleanerApp(toga.App):
         tally_box.add(self.space_saved_label)
 
         main_box.add(tally_box)
-        main_box.add(toga.Divider(margin_top=20, margin_bottom=10))
 
-        # Guidance message area
-        self.guidance_label = toga.Label(
-            "", style=Pack(text_align="center", font_style="italic", margin_bottom=5)
-        )
-        main_box.add(self.guidance_label)
+        # Progress bar
+        self.progress_bar = toga.ProgressBar(max=100, value=0)
+        self.progress_bar.style.visibility = 'hidden'
+        main_box.add(self.progress_bar)
+
+        main_box.add(toga.Divider(margin_top=10, margin_bottom=10))
 
         # Status area (one label)
         status_box = toga.Box(style=Pack(direction="column", margin=7), flex=2)
@@ -181,8 +181,19 @@ class PhotoRecCleanerApp(toga.App):
             color=GREEN,
             font_weight="bold",
         )
+                # Guidance message area
+        self.guidance_label = toga.Label(
+            "",
+            font_family="monospace",
+            font_size=10,
+            color="#ffffff",
+            font_weight="bold",
+            style=Pack(margin_top=5)
+        )
 
         status_box.add(self.status_label)
+        status_box.add(self.guidance_label)
+
 
         scroll_container = toga.ScrollContainer(
             content=status_box, horizontal=False, vertical=True
@@ -193,7 +204,7 @@ class PhotoRecCleanerApp(toga.App):
 
         # Action buttons
         action_box = toga.Box(
-            style=Pack(margin_top=10, flex=1, align_items="end", margin_bottom=10)
+            style=Pack(margin_top=10, flex=1, align_items="center", margin_bottom=10)
         )
         self.clean_now_button = toga.Button(
             "Process Now",
@@ -294,9 +305,7 @@ class PhotoRecCleanerApp(toga.App):
         self.clean_now_button.enabled = False
         self.start_button.enabled = False
         self.finish_button.enabled = True
-        self.guidance_label.text = (
-            "Live monitoring started. Click 'Finalize' when PhotoRec is finished."
-        )
+        self.guidance_label.text = "Live monitoring started. Click 'Finalize' when PhotoRec is finished."
         self.status_label.text = "Monitoring..."  # Set initial status immediately
         self.controller.start_monitoring()
 
@@ -305,16 +314,10 @@ class PhotoRecCleanerApp(toga.App):
         self.status_label.text = shorten_path(message, maxlen=120)
 
     def update_tally(self):
-        self.folders_processed_label.text = (
-            f"Folders Processed: {len(self.app_state.cleaned_folders)}"
-        )
+        self.folders_processed_label.text = f"Folders Processed: {len(self.app_state.cleaned_folders)}"
         self.files_kept_label.text = f"Files Kept: {self.app_state.total_kept_count}"
-        self.files_deleted_label.text = (
-            f"Files Deleted: {self.app_state.total_deleted_count}"
-        )
-        self.space_saved_label.text = (
-            f"Space Saved: {self._format_size(self.app_state.total_deleted_size)}"
-        )
+        self.files_deleted_label.text = f"Files Deleted: {self.app_state.total_deleted_count}"
+        self.space_saved_label.text = f"Space Saved: {self._format_size(self.app_state.total_deleted_size)}"
 
     def _format_size(self, size_bytes: int) -> str:
         if size_bytes < 1024:
@@ -325,14 +328,17 @@ class PhotoRecCleanerApp(toga.App):
             return f"{size_bytes / 1024**2:.1f} MB"
         return f"{size_bytes / 1024**3:.1f} GB"
 
-    def finish_handler(self, widget):
-        self.controller.finish_processing()
+    async def finish_handler(self, widget):
+        self.progress_bar.style.visibility = "visible"
+        await self.controller.finish_processing()
+        self.progress_bar.style.visibility = "hidden"
 
         # Show final report
         self._show_final_report()
 
         base_dir = self.dir_path_input.value
-        recup_dirs = get_recup_dirs(base_dir)
+        # get_recup_dirs can be slow, run it in a thread
+        recup_dirs = await asyncio.to_thread(get_recup_dirs, base_dir)
         self.clean_now_button.enabled = bool(recup_dirs)
         self.start_button.enabled = True
         self.finish_button.enabled = False
@@ -345,6 +351,7 @@ class PhotoRecCleanerApp(toga.App):
         # Disable buttons during processing
         self.clean_now_button.enabled = False
         self.start_button.enabled = False
+        self.progress_bar.style.visibility = "visible"
 
         await self.controller.perform_one_shot_clean()
 
@@ -353,6 +360,7 @@ class PhotoRecCleanerApp(toga.App):
         self.app_state.reset()
         self.guidance_label.text = ""
         self.update_tally()
+        self.progress_bar.style.visibility = "hidden"
 
     def _show_final_report(self):
         report_title = "Processing Complete"
@@ -367,6 +375,13 @@ class PhotoRecCleanerApp(toga.App):
             self._show_dialog_async(report_title, report_body),
             asyncio.get_running_loop(),
         )
+
+    def update_progress(self, value, max_value):
+        self.progress_bar.max = max_value
+        self.progress_bar.value = value
+
+    async def _update_progress_async(self, value, max_value):
+        self.update_progress(value, max_value)
 
     def update_status(self, message: str):
         # called from file_utils cleaners which might run in the main thread

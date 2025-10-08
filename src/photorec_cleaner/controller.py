@@ -139,7 +139,7 @@ class AppController:
             self.monitoring_task = None
             self.start_folder_polling()  # Restart polling when monitoring stops
 
-    def finish_processing(self):
+    async def finish_processing(self):
         """Stops monitoring and performs final cleanup and reorganization."""
         if self.monitoring_task and not self.monitoring_task.done():
             self._stop_monitoring = True
@@ -148,13 +148,35 @@ class AppController:
         base_dir = self.app.dir_path_input.value
         if not base_dir:
             return
+        
+        loop = asyncio.get_running_loop()
+        await asyncio.to_thread(self._finish_processing_sync, base_dir, loop)
 
+    def _finish_processing_sync(self, base_dir: str, loop: asyncio.AbstractEventLoop):
+        """Synchronous method for final cleanup and reorganization."""
+        
+        total_steps = 1 # for closing log file
+        if self.app.reorg_switch.value:
+            total_steps += 1
+        
         recup_dirs = get_recup_dirs(base_dir)
         if recup_dirs:
             last_folder = recup_dirs[-1]
             if last_folder not in self.app_state.cleaned_folders:
-                self.app.status_label.text = (
-                    f"Processing final folder {shorten_path(last_folder, 60)}..."
+                total_steps += 1
+        
+        asyncio.run_coroutine_threadsafe(
+            self.app._update_progress_async(0, total_steps), loop
+        )
+        
+        steps_done = 0
+
+        if recup_dirs:
+            last_folder = recup_dirs[-1]
+            if last_folder not in self.app_state.cleaned_folders:
+                message = f"Processing final folder {shorten_path(last_folder, 60)}..."
+                asyncio.run_coroutine_threadsafe(
+                    self.app._set_status_text_async(message), loop
                 )
                 # Respect the cleaning switch for the final pass
                 keep_ext_str = (
@@ -178,18 +200,36 @@ class AppController:
                     self.app_state,
                     keep_ext=keep_ext,
                     exclude_ext=exclude_ext,
-                    logger=self.app.update_status,
+                    logger=self._logger_callback,
                 )
                 self.app_state.cleaned_folders.add(last_folder)
-                self.app.update_tally()
+                asyncio.run_coroutine_threadsafe(self.app._update_tally_async(), loop)
+                steps_done += 1
+                asyncio.run_coroutine_threadsafe(
+                    self.app._update_progress_async(steps_done, total_steps), loop
+                )
 
         if self.app.reorg_switch.value:
-            self.app.status_label.text = "Reorganizing files..."
+            message = "Reorganizing files..."
+            asyncio.run_coroutine_threadsafe(
+                self.app._set_status_text_async(message), loop
+            )
             batch_size = int(self.app.batch_size_input.value)
             organize_by_type(base_dir, self.app_state, batch_size=batch_size)
-            self.app.status_label.text = "Reorganization complete."
+            message = "Reorganization complete."
+            asyncio.run_coroutine_threadsafe(
+                self.app._set_status_text_async(message), loop
+            )
+            steps_done += 1
+            asyncio.run_coroutine_threadsafe(
+                self.app._update_progress_async(steps_done, total_steps), loop
+            )
 
         self._close_log_file()
+        steps_done += 1
+        asyncio.run_coroutine_threadsafe(
+            self.app._update_progress_async(steps_done, total_steps), loop
+        )
 
     def _close_log_file(self):
         """Closes the log file handle if it's open."""
@@ -222,6 +262,11 @@ class AppController:
             )
             return
 
+        num_folders = len(recup_dirs)
+        asyncio.run_coroutine_threadsafe(
+            self.app._update_progress_async(0, num_folders), loop
+        )
+
         # Respect the cleaning switch for the one-shot process
         keep_ext_str = (
             self.app.keep_ext_input.value if self.app.cleaning_switch.value else ""
@@ -233,7 +278,7 @@ class AppController:
         exclude_ext = {ext.strip() for ext in exclude_ext_str.split(",") if ext.strip()}
 
         for i, folder in enumerate(recup_dirs):
-            message = f"Processing folder {i + 1}/{len(recup_dirs)}..."
+            message = f"Processing folder {i + 1}/{num_folders}..."
             asyncio.run_coroutine_threadsafe(
                 self.app._set_status_text_async(message), loop
             )
@@ -247,6 +292,9 @@ class AppController:
             )
             self.app_state.cleaned_folders.add(folder)
             asyncio.run_coroutine_threadsafe(self.app._update_tally_async(), loop)
+            asyncio.run_coroutine_threadsafe(
+                self.app._update_progress_async(i + 1, num_folders), loop
+            )
 
         if self.app.reorg_switch.value:
             message = "Reorganizing files..."
