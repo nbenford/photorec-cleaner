@@ -144,7 +144,7 @@ def get_recup_dirs(base_dir):
 
 def organize_by_type(base_dir, state, batch_size=500):
     """
-    Moves kept files into new folders organized by file type.
+    Moves kept files into new folders organized by file type and batch size.
 
     After moving, it deletes the original, now-empty `recup_dir.X` folders.
 
@@ -160,14 +160,30 @@ def organize_by_type(base_dir, state, batch_size=500):
     for ext, paths in state.kept_files.items():
         type_folder = os.path.join(base_dir, ext)
         os.makedirs(type_folder, exist_ok=True)
+
+        if not paths:
+            continue
+
         num_batches = ceil(len(paths) / batch_size)
-        subfolder = os.path.join(type_folder, "1") if num_batches > 0 else type_folder
-        os.makedirs(subfolder, exist_ok=True)
-        for path in paths:
-            try:
-                shutil.move(path, subfolder)
-            except (shutil.Error, OSError):
-                pass  # Errors will be handled by the user seeing the file wasn't moved
+
+        if num_batches <= 1:
+            # If there's only one batch, move files directly to the type_folder
+            for path in paths:
+                try:
+                    shutil.move(path, type_folder)
+                except (shutil.Error, OSError):
+                    pass
+        else:
+            # If multiple batches are needed, create subfolders
+            for i, path in enumerate(paths):
+                batch_num = (i // batch_size) + 1
+                subfolder_name = str(batch_num)
+                subfolder = os.path.join(type_folder, subfolder_name)
+                os.makedirs(subfolder, exist_ok=True)
+                try:
+                    shutil.move(path, subfolder)
+                except (shutil.Error, OSError):
+                    pass
 
     # Clean up the now-empty recup_dir.* folders
     recup_dirs_to_delete = get_recup_dirs(base_dir)

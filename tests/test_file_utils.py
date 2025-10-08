@@ -115,7 +115,7 @@ class TestFileUtils(unittest.TestCase):
         self.assertEqual(state.total_deleted_count, 5)
 
     def test_clean_folder_with_exclude_rules_and_logging(self):
-        """Verify that excluded files are deleted and logging works.""" 
+        """Verify that excluded files are deleted and logging works."""
         state = AppState()
         keep_extensions = {"jpg", "jpeg"}
         exclude_extensions = {"jpeg"}
@@ -153,4 +153,3 @@ class TestFileUtils(unittest.TestCase):
         self.assertEqual(state.total_kept_count, len(self.files_to_create))
         self.assertEqual(state.total_deleted_count, 0)
         self.assertEqual(state.total_deleted_size, 0)
-

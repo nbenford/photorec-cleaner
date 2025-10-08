@@ -23,10 +23,12 @@ from .gui_utils import shorten_path
 
 
 class PhotoRecCleanerApp(toga.App):
+    
     def startup(self):
         self.main_window = toga.MainWindow(title=self.formal_name)
         self.app_state = AppState()
         self.controller = AppController(self, self.app_state)
+
 
         self.build_ui()
         self.main_window.content = self.main_box
@@ -36,7 +38,28 @@ class PhotoRecCleanerApp(toga.App):
         self.main_window.show()
 
     def build_ui(self):
-        main_box = toga.Box(style=Pack(direction="column", margin=10, flex=1))
+        #load logo
+        photorec_cleaner_logo = toga.Image("resources/WarpedWingLabsLogo_Horizontal_Compressed_W500_blur.png")
+
+        header_box = toga.Box(style=Pack(direction="row", margin=5, flex=1))
+        header_box.add(toga.ImageView(photorec_cleaner_logo, height=75, margin_bottom=10))
+
+        
+        label1 = toga.Label('1. Select the PhotoRec output directory.')
+        label2 = toga.Label('2. Configure options as needed.')
+        label3 = toga.Label('3. Click "Start Live Monitoring" to begin cleaning as files are recovered.')
+        label4 = toga.Label('4. Click "Finalize" when PhotoRec is finished to stop monitoring and see a summary.')
+        label5 = toga.Label('5. Alternatively, click "Process Now" to clean an existing PhotoRec output folder.')
+        content = toga.Box(children=[label1, label2, label3, label4, label5], style=Pack(direction='column'))
+
+        container = toga.ScrollContainer(content=content, flex=1)
+        header_box.add(container)
+        
+        main_box = toga.Box(style=Pack(direction="column", margin_bottom=15, margin_left=10, margin_right=10, flex=1))
+        main_box.add(header_box)
+        main_box.add(toga.Divider(margin_bottom=10))
+        
+
 
         # Directory selection
         dir_box = toga.Box(style=Pack(margin_bottom=10))
